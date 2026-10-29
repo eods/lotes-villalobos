@@ -1,5 +1,5 @@
 // Cache para funcionar sin conexión. Subir la versión al cambiar archivos.
-const CACHE = 'lotes-villalobos-v3';
+const CACHE = 'lotes-villalobos-v4';
 const ARCHIVOS = ['./', 'index.html', 'config.js', 'lotes.js', 'mapa.jpg', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 

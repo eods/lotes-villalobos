@@ -1,5 +1,14 @@
 // Lotes de Villalobos: número -> [x, y, m²]
 // x, y en píxeles sobre mapa.jpg (2000 x 998), posición del número de lote en el plano.
+
+// Plano -> coordenadas: lat = lat[0] + lat[1]*x + lat[2]*y (ídem lng), con y del centro del lote.
+// Ajuste afín con las 4 esquinas del barrio (borde de lotes, sin la calle de acceso); error ~4 m.
+const GEO = {
+  lat: [-34.7728015158795, 0.0000049540230289184035, -0.0000044533506998970295],
+  lng: [-58.14591026894355, 0.000005430851161360681, 0.0000060519737996155695],
+};
+const coordenadas = (x, y) => [GEO.lat[0] + GEO.lat[1] * x + GEO.lat[2] * y, GEO.lng[0] + GEO.lng[1] * x + GEO.lng[2] * y];
+
 const LOTES = {
   // Columna oeste (izquierda)
   147:[333,226,699],146:[333,258,709],145:[333,288,600],144:[333,318,600],143:[333,345,600],

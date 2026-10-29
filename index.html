@@ -75,6 +75,9 @@
   #fProp { color: var(--texto); font-weight: 600; overflow-wrap: anywhere; }
   #ficha.error .num { color: var(--marca); font-size: 18px; }
   #btnEditar { font-size: 14px; padding: 8px 12px; background: var(--azul); color: #fff; display: none; }
+  #btnLlegar { display: none; margin-top: 10px; padding: 10px; border-radius: 10px; text-align: center;
+    font-size: 15px; font-weight: 600; text-decoration: none; color: #fff; background: #1a73e8; }
+  #btnLlegar.on { display: block; }
   #edicion { display: none; margin-top: 10px; gap: 8px; }
   #edicion.on { display: flex; }
   #edicion input { font-size: 16px; padding: 8px 10px; border: 1px solid var(--borde); }
@@ -153,6 +156,7 @@
       <div class="det" id="fDet"></div>
       <button id="btnEditar" type="button">Editar</button>
     </div>
+    <a id="btnLlegar" target="_blank" rel="noopener">📍 Cómo llegar con Google Maps</a>
     <form id="edicion" autocomplete="off">
       <input id="eProp" type="text" maxlength="30" placeholder="Propietario (vacío = borrar)" aria-label="Propietario">
       <button type="submit">Guardar</button>
@@ -258,6 +262,7 @@ function mensajeFicha(t) { const m = $('fMsg'); m.textContent = t || ''; m.style
 function mostrar(n, centrar) {
   const d = LOTES[n];
   $('edicion').classList.remove('on');
+  $('btnLlegar').classList.toggle('on', !!d);
   mensajeFicha('');
   if (!d) {
     actual = null;
@@ -285,6 +290,8 @@ function mostrar(n, centrar) {
     det.insertAdjacentHTML('beforeend', '<div>Sin propietario cargado</div>');
   }
   $('btnEditar').style.display = clave ? 'block' : 'none';
+  const [lat, lng] = coordenadas(d[0], d[1] + DY);
+  $('btnLlegar').href = `https://www.google.com/maps/dir/?api=1&destination=${lat.toFixed(6)},${lng.toFixed(6)}`;
   if (centrar) centrarEn(d[0], d[1] + DY, Math.max(escalaMin() * 3, 1.3));
 }
 function irALote(n) {
