@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Lotes Villalobos</title>
+<meta name="theme-color" content="#0b5f8a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lotes">
+<style>
+  :root {
+    --azul: #0b5f8a;
+    --fondo: #f3f5f7;
+    --panel: #ffffff;
+    --texto: #1b2430;
+    --suave: #64707d;
+    --marca: #ff3b30;
+    --borde: #d9dee4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo: #12171d; --panel: #1c232b; --texto: #e8edf2; --suave: #9aa6b2; --borde: #2c3640; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+
+  header { background: var(--azul); color: #fff; padding: calc(env(safe-area-inset-top) + 10px) 16px 12px; }
+  header h1 { margin: 0 0 8px; font-size: 17px; font-weight: 600; letter-spacing: .3px; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font-size: 20px; padding: 10px 14px; border: 0; border-radius: 10px;
+    background: #fff; color: #1b2430; outline: none; }
+  button { font-size: 16px; font-weight: 600; padding: 10px 16px; border: 0; border-radius: 10px;
+    background: #fff; color: var(--azul); cursor: pointer; }
+  button:active { transform: scale(.97); }
+
+  #visor { position: relative; flex: 1; overflow: hidden; touch-action: none; background: #e9ecef; }
+  #lienzo { position: absolute; left: 0; top: 0; width: 2000px; height: 998px; transform-origin: 0 0; }
+  #lienzo.anim { transition: transform .45s ease; }
+  #lienzo img { width: 2000px; height: 998px; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+
+  .marca { position: absolute; width: 0; height: 0; display: none; }
+  .marca.on { display: block; }
+  .marca .aro { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%;
+    border: 4px solid var(--marca); box-shadow: 0 0 0 3px rgba(255,255,255,.85); animation: pulso 1.4s ease-out infinite; }
+  .marca .pin { position: absolute; left: -16px; top: -62px; width: 32px; height: 40px; }
+  @keyframes pulso { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(1.6); opacity: .15; } }
+  .punto { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%;
+    background: rgba(255,59,48,.8); border: 1px solid #fff; font-size: 9px; }
+  .punto span { position: absolute; left: 8px; top: -4px; color: #000; background: #ffeb3b; padding: 0 2px; }
+
+  #ficha { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px);
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18); display: none; align-items: center; gap: 14px; max-width: 480px; margin: 0 auto; }
+  #ficha.on { display: flex; }
+  #ficha .num { font-size: 30px; font-weight: 700; color: var(--azul); line-height: 1; }
+  #ficha .det { flex: 1; font-size: 14px; color: var(--suave); }
+  #ficha .det b { color: var(--texto); font-size: 16px; }
+  #ficha.error .num { color: var(--marca); font-size: 18px; }
+
+  #controles { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  #controles button { width: 42px; height: 42px; padding: 0; font-size: 22px; background: var(--panel); color: var(--texto);
+    border: 1px solid var(--borde); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  #ayuda { position: absolute; left: 12px; top: 12px; font-size: 12px; color: #33414f; background: rgba(255,255,255,.85);
+    padding: 4px 8px; border-radius: 8px; pointer-events: none; }
+  #editor { display: none; position: absolute; left: 12px; top: 40px; background: #fff3cd; color: #5c4400;
+    padding: 6px 10px; border-radius: 8px; font-size: 12px; }
+  #editor button { font-size: 12px; padding: 4px 8px; margin-left: 6px; background: #5c4400; color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Villalobos · Buscador de lotes</h1>
+  <form id="buscar" autocomplete="off">
+    <input id="lote" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="N° de lote (1 a 454)" aria-label="Número de lote">
+    <button type="submit">Buscar</button>
+  </form>
+</header>
+
+<div id="visor">
+  <div id="lienzo">
+    <img src="mapa.jpg" alt="Plano de Villalobos">
+    <div class="marca" id="marca">
+      <div class="aro"></div>
+      <svg class="pin" viewBox="0 0 32 40"><path d="M16 0C7.2 0 0 7 0 15.6 0 27.3 16 40 16 40s16-12.7 16-24.4C32 7 24.8 0 16 0z" fill="#ff3b30" stroke="#fff" stroke-width="2"/><circle cx="16" cy="15" r="6" fill="#fff"/></svg>
+    </div>
+  </div>
+  <div id="ayuda">Tocá un lote del plano o buscá por número</div>
+  <div id="editor">Modo edición: tocá el plano para mover el lote buscado
+    <button id="exportar" type="button">Copiar JSON</button></div>
+  <div id="controles">
+    <button id="mas" type="button" aria-label="Acercar">+</button>
+    <button id="menos" type="button" aria-label="Alejar">−</button>
+    <button id="todo" type="button" aria-label="Ver plano completo">⤢</button>
+  </div>
+  <div id="ficha"><div class="num" id="fNum"></div><div class="det" id="fDet"></div></div>
+</div>
+
+<script src="lotes.js"></script>
+<script>
+const W = 2000, H = 998, DY = 7; // DY: del número de lote al centro del recuadro
+const params = new URLSearchParams(location.search);
+const EDITAR = params.has('editar');
+
+// Correcciones de posición hechas en modo edición (solo en este dispositivo)
+let ajustes = {};
+try { ajustes = JSON.parse(localStorage.getItem('ajustesLotes') || '{}'); } catch (e) {}
+for (const n in ajustes) if (LOTES[n]) { LOTES[n][0] = ajustes[n][0]; LOTES[n][1] = ajustes[n][1]; }
+
+const visor = document.getElementById('visor');
+const lienzo = document.getElementById('lienzo');
+const marca = document.getElementById('marca');
+const ficha = document.getElementById('ficha');
+const input = document.getElementById('lote');
+let s = 1, tx = 0, ty = 0, actual = null;
+
+function escalaMin() { return Math.min(visor.clientWidth / W, visor.clientHeight / H); }
+function limitar() {
+  const vw = visor.clientWidth, vh = visor.clientHeight;
+  s = Math.max(escalaMin(), Math.min(s, 4));
+  const w = W * s, h = H * s;
+  tx = w <= vw ? (vw - w) / 2 : Math.min(0, Math.max(vw - w, tx));
+  ty = h <= vh ? (vh - h) / 2 : Math.min(0, Math.max(vh - h, ty));
+}
+function aplicar(anim) {
+  limitar();
+  lienzo.classList.toggle('anim', !!anim);
+  lienzo.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+}
+function verTodo(anim) { s = escalaMin(); aplicar(anim); }
+function zoomEn(px, py, nuevo, anim) {
+  const x = (px - tx) / s, y = (py - ty) / s;
+  s = nuevo; limitar();
+  tx = px - x * s; ty = py - y * s;
+  aplicar(anim);
+}
+function centrarEn(x, y, escala) {
+  s = escala;
+  tx = visor.clientWidth / 2 - x * s;
+  ty = visor.clientHeight * 0.42 - y * s;
+  aplicar(true);
+}
+
+function mostrar(n, centrar) {
+  const d = LOTES[n];
+  if (!d) {
+    actual = null;
+    marca.classList.remove('on');
+    ficha.className = 'on error';
+    document.getElementById('fNum').textContent = 'Lote no encontrado';
+    document.getElementById('fDet').textContent = `No existe el lote "${n}" en el plano (1 a 454).`;
+    return;
+  }
+  actual = n;
+  marca.style.left = d[0] + 'px';
+  marca.style.top = (d[1] + DY) + 'px';
+  marca.classList.add('on');
+  ficha.className = 'on';
+  document.getElementById('fNum').textContent = n;
+  document.getElementById('fDet').innerHTML = `<b>Lote ${n}</b><br>${d[2].toLocaleString('es-AR')} m² según plano`;
+  if (centrar) centrarEn(d[0], d[1] + DY, Math.max(escalaMin() * 3, 1.3));
+}
+
+document.getElementById('buscar').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = parseInt(input.value, 10);
+  if (isNaN(n)) return;
+  input.blur();
+  mostrar(n, true);
+  history.replaceState(null, '', '#' + n);
+});
+
+document.getElementById('mas').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s * 1.6, true);
+document.getElementById('menos').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s / 1.6, true);
+document.getElementById('todo').onclick = () => verTodo(true);
+
+// Pan, pellizco y toque con Pointer Events
+const punteros = new Map();
+let inicio = null, movido = false;
+visor.addEventListener('pointerdown', e => {
+  if (e.target.closest('button, #ficha')) return;
+  visor.setPointerCapture(e.pointerId);
+  punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  movido = false;
+  inicio = estadoGesto();
+});
+visor.addEventListener('pointermove', e => {
+  if (!punteros.has(e.pointerId)) return;
+  punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const g = estadoGesto();
+  if (!inicio || g.n !== inicio.n) { inicio = g; return; }
+  if (Math.hypot(g.cx - inicio.cx, g.cy - inicio.cy) > 6 || g.n > 1) movido = true;
+  if (!movido) return;
+  const r = visor.getBoundingClientRect();
+  const nuevaS = g.n > 1 ? inicio.s * g.dist / inicio.dist : s;
+  // Punto del mapa bajo el centro inicial del gesto sigue al centro actual
+  const mx = (inicio.cx - r.left - inicio.tx) / inicio.s, my = (inicio.cy - r.top - inicio.ty) / inicio.s;
+  s = nuevaS;
+  tx = g.cx - r.left - mx * s; ty = g.cy - r.top - my * s;
+  aplicar(false);
+  if (s !== nuevaS) inicio = estadoGesto(); // tope de zoom alcanzado
+});
+function fin(e) {
+  if (!punteros.has(e.pointerId)) return;
+  punteros.delete(e.pointerId);
+  if (!movido && punteros.size === 0) toque(e.clientX, e.clientY);
+  inicio = punteros.size ? estadoGesto() : null;
+}
+visor.addEventListener('pointerup', fin);
+visor.addEventListener('pointercancel', fin);
+function estadoGesto() {
+  const p = [...punteros.values()];
+  const cx = p.reduce((a, b) => a + b.x, 0) / (p.length || 1);
+  const cy = p.reduce((a, b) => a + b.y, 0) / (p.length || 1);
+  const dist = p.length > 1 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 1;
+  return { n: p.length, cx, cy, dist, s, tx, ty };
+}
+visor.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = visor.getBoundingClientRect();
+  zoomEn(e.clientX - r.left, e.clientY - r.top, s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), false);
+}, { passive: false });
+
+// Tocar el plano: lote más cercano (o mover el lote en modo edición)
+function toque(cx, cy) {
+  const r = visor.getBoundingClientRect();
+  const x = (cx - r.left - tx) / s, y = (cy - r.top - ty) / s;
+  if (EDITAR && actual) {
+    LOTES[actual][0] = Math.round(x); LOTES[actual][1] = Math.round(y - DY);
+    ajustes[actual] = [LOTES[actual][0], LOTES[actual][1]];
+    try { localStorage.setItem('ajustesLotes', JSON.stringify(ajustes)); } catch (e) {}
+    mostrar(actual, false);
+    return;
+  }
+  let mejor = null, dMin = Infinity;
+  for (const n in LOTES) {
+    const d = Math.hypot(LOTES[n][0] - x, LOTES[n][1] + DY - y);
+    if (d < dMin) { dMin = d; mejor = n; }
+  }
+  if (mejor && dMin < 30) { input.value = mejor; mostrar(+mejor, false); history.replaceState(null, '', '#' + mejor); }
+}
+
+if (EDITAR) {
+  document.getElementById('editor').style.display = 'block';
+  document.getElementById('exportar').onclick = () => {
+    const txt = JSON.stringify(ajustes);
+    navigator.clipboard?.writeText(txt).then(() => alert('Copiado: ' + Object.keys(ajustes).length + ' ajustes'), () => prompt('Copiá esto:', txt));
+  };
+}
+// ?todos: muestra todos los lotes (para revisar posiciones)
+if (params.has('todos')) {
+  for (const n in LOTES) {
+    const p = document.createElement('div');
+    p.className = 'punto';
+    p.style.left = LOTES[n][0] + 'px'; p.style.top = (LOTES[n][1] + DY) + 'px';
+    p.innerHTML = `<span>${n}</span>`;
+    lienzo.appendChild(p);
+  }
+}
+
+window.addEventListener('resize', () => aplicar(false));
+const img = lienzo.querySelector('img');
+function arrancar() {
+  verTodo(false);
+  const n = parseInt(location.hash.slice(1), 10);
+  if (!isNaN(n)) { input.value = n; mostrar(n, true); }
+}
+img.complete ? arrancar() : img.addEventListener('load', arrancar);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
