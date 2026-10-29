@@ -21,9 +21,10 @@
     --suave: #64707d;
     --marca: #ff3b30;
     --borde: #d9dee4;
+    --resalte: #e8f2f8;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --fondo: #12171d; --panel: #1c232b; --texto: #e8edf2; --suave: #9aa6b2; --borde: #2c3640; }
+    :root { --fondo: #12171d; --panel: #1c232b; --texto: #e8edf2; --suave: #9aa6b2; --borde: #2c3640; --resalte: #23313d; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto);
@@ -31,9 +32,11 @@
   body { display: flex; flex-direction: column; }
 
   header { background: var(--azul); color: #fff; padding: calc(env(safe-area-inset-top) + 10px) 16px 12px; }
-  header h1 { margin: 0 0 8px; font-size: 17px; font-weight: 600; letter-spacing: .3px; }
-  form { display: flex; gap: 8px; }
-  input { flex: 1; min-width: 0; font-size: 20px; padding: 10px 14px; border: 0; border-radius: 10px;
+  .titulo { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
+  header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: .3px; }
+  #candado { background: transparent; color: #fff; font-size: 18px; padding: 2px 6px; display: none; }
+  #buscar { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; font-size: 18px; padding: 10px 14px; border: 0; border-radius: 10px;
     background: #fff; color: #1b2430; outline: none; }
   button { font-size: 16px; font-weight: 600; padding: 10px 16px; border: 0; border-radius: 10px;
     background: #fff; color: var(--azul); cursor: pointer; }
@@ -44,7 +47,7 @@
   #lienzo.anim { transition: transform .45s ease; }
   #lienzo img { width: 2000px; height: 998px; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none; }
 
-  .marca { position: absolute; width: 0; height: 0; display: none; }
+  .marca { position: absolute; width: 0; height: 0; display: none; z-index: 3; }
   .marca.on { display: block; }
   .marca .aro { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%;
     border: 4px solid var(--marca); box-shadow: 0 0 0 3px rgba(255,255,255,.85); animation: pulso 1.4s ease-out infinite; }
@@ -54,30 +57,73 @@
     background: rgba(255,59,48,.8); border: 1px solid #fff; font-size: 9px; }
   .punto span { position: absolute; left: 8px; top: -4px; color: #000; background: #ffeb3b; padding: 0 2px; }
 
-  #ficha { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px);
-    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 12px 16px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.18); display: none; align-items: center; gap: 14px; max-width: 480px; margin: 0 auto; }
-  #ficha.on { display: flex; }
-  #ficha .num { font-size: 30px; font-weight: 700; color: var(--azul); line-height: 1; }
-  #ficha .det { flex: 1; font-size: 14px; color: var(--suave); }
-  #ficha .det b { color: var(--texto); font-size: 16px; }
-  #ficha.error .num { color: var(--marca); font-size: 18px; }
+  /* Nombres de propietarios sobre el plano (en píxeles del plano, escalan con el zoom) */
+  #etiquetas { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  #etiquetas.off { display: none; }
+  .etiqueta { position: absolute; transform: translate(-50%, 9px); max-width: 60px; padding: 0 2px;
+    font-size: 6.5px; line-height: 1.25; font-weight: 600; color: #fff; background: rgba(11,95,138,.88);
+    border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  #controles { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  #ficha { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 12px); z-index: 5;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.18); display: none; max-width: 480px; margin: 0 auto; }
+  #ficha.on { display: block; }
+  .fila { display: flex; align-items: center; gap: 14px; }
+  #ficha .num { font-size: 30px; font-weight: 700; color: var(--azul); line-height: 1; }
+  #ficha .det { flex: 1; min-width: 0; font-size: 14px; color: var(--suave); }
+  #ficha .det b { color: var(--texto); font-size: 16px; }
+  #fProp { color: var(--texto); font-weight: 600; overflow-wrap: anywhere; }
+  #ficha.error .num { color: var(--marca); font-size: 18px; }
+  #btnEditar { font-size: 14px; padding: 8px 12px; background: var(--azul); color: #fff; display: none; }
+  #edicion { display: none; margin-top: 10px; gap: 8px; }
+  #edicion.on { display: flex; }
+  #edicion input { font-size: 16px; padding: 8px 10px; border: 1px solid var(--borde); }
+  #edicion button { font-size: 14px; padding: 8px 12px; background: var(--azul); color: #fff; }
+  #edicion button.sec { background: transparent; color: var(--suave); padding: 8px 6px; }
+  #fMsg { font-size: 12px; color: var(--marca); margin-top: 6px; display: none; }
+
+  #resultados { position: absolute; left: 12px; right: 64px; top: 12px; z-index: 6; max-width: 480px; margin: 0 auto;
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.18);
+    display: none; max-height: 60%; overflow: auto; }
+  #resultados.on { display: block; }
+  #resultados .cab { padding: 10px 14px; font-size: 13px; color: var(--suave); border-bottom: 1px solid var(--borde);
+    display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--panel); }
+  #resultados .cab button { background: transparent; color: var(--suave); padding: 0 4px; font-size: 20px; }
+  #resultados .op { display: flex; gap: 12px; align-items: baseline; width: 100%; text-align: left; border-radius: 0;
+    padding: 12px 14px; background: transparent; color: var(--texto); font-weight: 400; border-bottom: 1px solid var(--borde); }
+  #resultados .op:last-child { border-bottom: 0; }
+  #resultados .op:active { background: var(--resalte); }
+  #resultados .op b { color: var(--azul); min-width: 34px; }
+
+  #controles { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 4; }
   #controles button { width: 42px; height: 42px; padding: 0; font-size: 22px; background: var(--panel); color: var(--texto);
     border: 1px solid var(--borde); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  #controles button.activo { background: var(--azul); color: #fff; }
+  #verNombres { display: none; font-size: 18px !important; }
   #ayuda { position: absolute; left: 12px; top: 12px; font-size: 12px; color: #33414f; background: rgba(255,255,255,.85);
-    padding: 4px 8px; border-radius: 8px; pointer-events: none; }
-  #editor { display: none; position: absolute; left: 12px; top: 40px; background: #fff3cd; color: #5c4400;
+    padding: 4px 8px; border-radius: 8px; pointer-events: none; z-index: 4; }
+  #editor { display: none; position: absolute; left: 12px; top: 40px; background: #fff3cd; color: #5c4400; z-index: 4;
     padding: 6px 10px; border-radius: 8px; font-size: 12px; }
   #editor button { font-size: 12px; padding: 4px 8px; margin-left: 6px; background: #5c4400; color: #fff; }
+
+  dialog { border: 0; border-radius: 14px; padding: 18px; width: min(320px, 90vw); background: var(--panel); color: var(--texto); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog h2 { margin: 0 0 12px; font-size: 17px; }
+  dialog input { width: 100%; border: 1px solid var(--borde); font-size: 16px; }
+  dialog .acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  dialog .acciones button { font-size: 15px; padding: 8px 14px; background: var(--azul); color: #fff; }
+  dialog .acciones button.sec { background: transparent; color: var(--suave); }
+  #dMsg { color: var(--marca); font-size: 13px; margin-top: 8px; min-height: 1em; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Villalobos · Buscador de lotes</h1>
+  <div class="titulo">
+    <h1>Villalobos · Buscador de lotes</h1>
+    <button id="candado" type="button" aria-label="Habilitar edición" title="Habilitar edición">🔒</button>
+  </div>
   <form id="buscar" autocomplete="off">
-    <input id="lote" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="N° de lote (1 a 454)" aria-label="Número de lote">
+    <input id="lote" type="search" enterkeyhint="search" placeholder="N° de lote (1 a 454)" aria-label="Lote o propietario">
     <button type="submit">Buscar</button>
   </form>
 </header>
@@ -85,6 +131,7 @@
 <div id="visor">
   <div id="lienzo">
     <img src="mapa.jpg" alt="Plano de Villalobos">
+    <div id="etiquetas"></div>
     <div class="marca" id="marca">
       <div class="aro"></div>
       <svg class="pin" viewBox="0 0 32 40"><path d="M16 0C7.2 0 0 7 0 15.6 0 27.3 16 40 16 40s16-12.7 16-24.4C32 7 24.8 0 16 0z" fill="#ff3b30" stroke="#fff" stroke-width="2"/><circle cx="16" cy="15" r="6" fill="#fff"/></svg>
@@ -97,28 +144,88 @@
     <button id="mas" type="button" aria-label="Acercar">+</button>
     <button id="menos" type="button" aria-label="Alejar">−</button>
     <button id="todo" type="button" aria-label="Ver plano completo">⤢</button>
+    <button id="verNombres" type="button" class="activo" aria-label="Mostrar u ocultar propietarios" title="Propietarios">👤</button>
   </div>
-  <div id="ficha"><div class="num" id="fNum"></div><div class="det" id="fDet"></div></div>
+  <div id="resultados"></div>
+  <div id="ficha">
+    <div class="fila">
+      <div class="num" id="fNum"></div>
+      <div class="det" id="fDet"></div>
+      <button id="btnEditar" type="button">Editar</button>
+    </div>
+    <form id="edicion" autocomplete="off">
+      <input id="eProp" type="text" maxlength="30" placeholder="Propietario (vacío = borrar)" aria-label="Propietario">
+      <button type="submit">Guardar</button>
+      <button type="button" class="sec" id="eCancelar">Cancelar</button>
+    </form>
+    <div id="fMsg"></div>
+  </div>
 </div>
 
+<dialog id="dClave">
+  <form id="fClave" method="dialog">
+    <h2>Habilitar edición</h2>
+    <input id="clave" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña">
+    <div id="dMsg"></div>
+    <div class="acciones">
+      <button type="button" class="sec" id="dCancelar">Cancelar</button>
+      <button type="submit" id="dOk">Entrar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="config.js"></script>
 <script src="lotes.js"></script>
 <script>
 const W = 2000, H = 998, DY = 7; // DY: del número de lote al centro del recuadro
 const params = new URLSearchParams(location.search);
 const EDITAR = params.has('editar');
+const $ = id => document.getElementById(id);
 
 // Correcciones de posición hechas en modo edición (solo en este dispositivo)
 let ajustes = {};
 try { ajustes = JSON.parse(localStorage.getItem('ajustesLotes') || '{}'); } catch (e) {}
 for (const n in ajustes) if (LOTES[n]) { LOTES[n][0] = ajustes[n][0]; LOTES[n][1] = ajustes[n][1]; }
 
-const visor = document.getElementById('visor');
-const lienzo = document.getElementById('lienzo');
-const marca = document.getElementById('marca');
-const ficha = document.getElementById('ficha');
-const input = document.getElementById('lote');
+const visor = $('visor'), lienzo = $('lienzo'), marca = $('marca'), ficha = $('ficha'), input = $('lote');
 let s = 1, tx = 0, ty = 0, actual = null;
 
+// ---------- Propietarios (Google Sheets vía Apps Script) ----------
+let PROP = {};
+let clave = null;
+try { PROP = JSON.parse(localStorage.getItem('propietarios') || '{}'); } catch (e) {}
+try { clave = sessionStorage.getItem('clave'); } catch (e) {}
+
+function guardarPropLocal() { try { localStorage.setItem('propietarios', JSON.stringify(PROP)); } catch (e) {} }
+async function cargarPropietarios() {
+  if (!API_URL) return;
+  try {
+    const r = await fetch(API_URL, { cache: 'no-store' });
+    const j = await r.json();
+    if (j.ok) { PROP = j.lotes || {}; guardarPropLocal(); dibujarEtiquetas(); if (actual) mostrar(actual, false); }
+  } catch (e) { /* sin conexión: quedan los datos guardados */ }
+}
+async function api(datos) {
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(datos) }); // text/plain: sin preflight CORS
+  return r.json();
+}
+function dibujarEtiquetas() {
+  const cont = $('etiquetas');
+  cont.textContent = '';
+  for (const n in PROP) {
+    const d = LOTES[n];
+    if (!d) continue;
+    const e = document.createElement('div');
+    e.className = 'etiqueta';
+    e.style.left = d[0] + 'px';
+    e.style.top = (d[1] + DY) + 'px';
+    e.textContent = PROP[n];
+    cont.appendChild(e);
+  }
+}
+const normalizar = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// ---------- Mapa: zoom y desplazamiento ----------
 function escalaMin() { return Math.min(visor.clientWidth / W, visor.clientHeight / H); }
 function limitar() {
   const vw = visor.clientWidth, vh = visor.clientHeight;
@@ -146,14 +253,19 @@ function centrarEn(x, y, escala) {
   aplicar(true);
 }
 
+// ---------- Ficha del lote ----------
+function mensajeFicha(t) { const m = $('fMsg'); m.textContent = t || ''; m.style.display = t ? 'block' : 'none'; }
 function mostrar(n, centrar) {
   const d = LOTES[n];
+  $('edicion').classList.remove('on');
+  mensajeFicha('');
   if (!d) {
     actual = null;
     marca.classList.remove('on');
     ficha.className = 'on error';
-    document.getElementById('fNum').textContent = 'Lote no encontrado';
-    document.getElementById('fDet').textContent = `No existe el lote "${n}" en el plano (1 a 454).`;
+    $('fNum').textContent = 'Lote no encontrado';
+    $('fDet').textContent = `No existe el lote "${n}" en el plano (1 a 454).`;
+    $('btnEditar').style.display = 'none';
     return;
   }
   actual = n;
@@ -161,29 +273,149 @@ function mostrar(n, centrar) {
   marca.style.top = (d[1] + DY) + 'px';
   marca.classList.add('on');
   ficha.className = 'on';
-  document.getElementById('fNum').textContent = n;
-  document.getElementById('fDet').innerHTML = `<b>Lote ${n}</b><br>${d[2].toLocaleString('es-AR')} m² según plano`;
+  $('fNum').textContent = n;
+  const det = $('fDet');
+  det.innerHTML = `<b>Lote ${n}</b> · ${d[2].toLocaleString('es-AR')} m²`;
+  if (PROP[n]) {
+    const p = document.createElement('div');
+    p.id = 'fProp';
+    p.textContent = PROP[n];
+    det.appendChild(p);
+  } else if (API_URL) {
+    det.insertAdjacentHTML('beforeend', '<div>Sin propietario cargado</div>');
+  }
+  $('btnEditar').style.display = clave ? 'block' : 'none';
   if (centrar) centrarEn(d[0], d[1] + DY, Math.max(escalaMin() * 3, 1.3));
 }
-
-document.getElementById('buscar').addEventListener('submit', e => {
-  e.preventDefault();
-  const n = parseInt(input.value, 10);
-  if (isNaN(n)) return;
-  input.blur();
+function irALote(n) {
+  input.value = n;
+  $('resultados').classList.remove('on');
   mostrar(n, true);
   history.replaceState(null, '', '#' + n);
+}
+
+// ---------- Búsqueda por número o por propietario ----------
+function mostrarOpciones(lista, texto) {
+  const r = $('resultados');
+  r.textContent = '';
+  const cab = document.createElement('div');
+  cab.className = 'cab';
+  cab.innerHTML = `<span>${lista.length} lotes coinciden con “<span id="rTxt"></span>”</span><button type="button" aria-label="Cerrar">×</button>`;
+  cab.querySelector('#rTxt').textContent = texto;
+  cab.querySelector('button').onclick = () => r.classList.remove('on');
+  r.appendChild(cab);
+  for (const n of lista) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'op';
+    b.innerHTML = `<b>${n}</b><span></span>`;
+    b.querySelector('span').textContent = PROP[n];
+    b.onclick = () => irALote(n);
+    r.appendChild(b);
+  }
+  r.classList.add('on');
+}
+$('buscar').addEventListener('submit', e => {
+  e.preventDefault();
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.blur();
+  if (/^\d+$/.test(texto)) return irALote(parseInt(texto, 10));
+  const q = normalizar(texto);
+  const lista = Object.keys(PROP).filter(n => normalizar(PROP[n]).includes(q)).map(Number).sort((a, b) => a - b);
+  $('resultados').classList.remove('on');
+  if (lista.length === 1) return irALote(lista[0]);
+  if (lista.length > 1) return mostrarOpciones(lista, texto);
+  actual = null;
+  marca.classList.remove('on');
+  ficha.className = 'on error';
+  $('fNum').textContent = 'Sin resultados';
+  $('fDet').textContent = `Ningún propietario coincide con "${texto}".`;
+  $('btnEditar').style.display = 'none';
+  $('edicion').classList.remove('on');
 });
 
-document.getElementById('mas').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s * 1.6, true);
-document.getElementById('menos').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s / 1.6, true);
-document.getElementById('todo').onclick = () => verTodo(true);
+// ---------- Edición con contraseña ----------
+function actualizarCandado() {
+  const c = $('candado');
+  c.textContent = clave ? '🔓' : '🔒';
+  c.title = clave ? 'Salir de edición' : 'Habilitar edición';
+  if (actual) mostrar(actual, false);
+}
+$('candado').onclick = () => {
+  if (clave) {
+    clave = null;
+    try { sessionStorage.removeItem('clave'); } catch (e) {}
+    return actualizarCandado();
+  }
+  $('clave').value = '';
+  $('dMsg').textContent = '';
+  $('dClave').showModal();
+};
+$('dCancelar').onclick = () => $('dClave').close();
+$('fClave').addEventListener('submit', async e => {
+  e.preventDefault();
+  const c = $('clave').value;
+  if (!c) return;
+  $('dOk').disabled = true;
+  $('dMsg').textContent = 'Verificando…';
+  try {
+    const j = await api({ accion: 'verificar', clave: c });
+    if (j.ok) {
+      clave = c;
+      try { sessionStorage.setItem('clave', c); } catch (x) {}
+      $('dClave').close();
+      actualizarCandado();
+    } else $('dMsg').textContent = j.error || 'No se pudo verificar';
+  } catch (x) {
+    $('dMsg').textContent = 'Sin conexión con el servidor';
+  }
+  $('dOk').disabled = false;
+});
+$('btnEditar').onclick = () => {
+  $('eProp').value = PROP[actual] || '';
+  $('edicion').classList.add('on');
+  mensajeFicha('');
+  $('eProp').focus();
+};
+$('eCancelar').onclick = () => { $('edicion').classList.remove('on'); mensajeFicha(''); };
+$('edicion').addEventListener('submit', async e => {
+  e.preventDefault();
+  const n = actual, nombre = $('eProp').value.trim().slice(0, 30);
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  mensajeFicha('Guardando…');
+  try {
+    const j = await api({ accion: 'guardar', clave, lote: n, propietario: nombre });
+    if (j.ok) {
+      PROP = j.lotes || {};
+      guardarPropLocal();
+      dibujarEtiquetas();
+      mostrar(n, false);
+    } else {
+      mensajeFicha(j.error || 'No se pudo guardar');
+      if (j.error === 'Contraseña incorrecta') { clave = null; try { sessionStorage.removeItem('clave'); } catch (x) {} actualizarCandado(); }
+    }
+  } catch (x) {
+    mensajeFicha('Sin conexión: no se guardó');
+  }
+  btn.disabled = false;
+});
+
+// ---------- Controles ----------
+$('mas').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s * 1.6, true);
+$('menos').onclick = () => zoomEn(visor.clientWidth / 2, visor.clientHeight / 2, s / 1.6, true);
+$('todo').onclick = () => verTodo(true);
+$('verNombres').onclick = e => {
+  const off = $('etiquetas').classList.toggle('off');
+  e.currentTarget.classList.toggle('activo', !off);
+};
 
 // Pan, pellizco y toque con Pointer Events
 const punteros = new Map();
 let inicio = null, movido = false;
 visor.addEventListener('pointerdown', e => {
-  if (e.target.closest('button, #ficha')) return;
+  if (e.target.closest('button, input, #ficha, #resultados')) return;
   visor.setPointerCapture(e.pointerId);
   punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
   movido = false;
@@ -221,6 +453,7 @@ function estadoGesto() {
   return { n: p.length, cx, cy, dist, s, tx, ty };
 }
 visor.addEventListener('wheel', e => {
+  if (e.target.closest('#resultados')) return;
   e.preventDefault();
   const r = visor.getBoundingClientRect();
   zoomEn(e.clientX - r.left, e.clientY - r.top, s * (e.deltaY < 0 ? 1.15 : 1 / 1.15), false);
@@ -235,6 +468,7 @@ function toque(cx, cy) {
     ajustes[actual] = [LOTES[actual][0], LOTES[actual][1]];
     try { localStorage.setItem('ajustesLotes', JSON.stringify(ajustes)); } catch (e) {}
     mostrar(actual, false);
+    dibujarEtiquetas();
     return;
   }
   let mejor = null, dMin = Infinity;
@@ -242,12 +476,17 @@ function toque(cx, cy) {
     const d = Math.hypot(LOTES[n][0] - x, LOTES[n][1] + DY - y);
     if (d < dMin) { dMin = d; mejor = n; }
   }
-  if (mejor && dMin < 30) { input.value = mejor; mostrar(+mejor, false); history.replaceState(null, '', '#' + mejor); }
+  if (mejor && dMin < 30) {
+    input.value = mejor;
+    $('resultados').classList.remove('on');
+    mostrar(+mejor, false);
+    history.replaceState(null, '', '#' + mejor);
+  }
 }
 
 if (EDITAR) {
-  document.getElementById('editor').style.display = 'block';
-  document.getElementById('exportar').onclick = () => {
+  $('editor').style.display = 'block';
+  $('exportar').onclick = () => {
     const txt = JSON.stringify(ajustes);
     navigator.clipboard?.writeText(txt).then(() => alert('Copiado: ' + Object.keys(ajustes).length + ' ajustes'), () => prompt('Copiá esto:', txt));
   };
@@ -261,6 +500,18 @@ if (params.has('todos')) {
     p.innerHTML = `<span>${n}</span>`;
     lienzo.appendChild(p);
   }
+}
+
+if (API_URL) {
+  input.placeholder = 'N° de lote o propietario';
+  $('ayuda').textContent = 'Tocá un lote o buscá por número o propietario';
+  $('candado').style.display = 'block';
+  $('verNombres').style.display = 'block';
+  actualizarCandado();
+  dibujarEtiquetas();
+  cargarPropietarios();
+} else {
+  input.setAttribute('inputmode', 'numeric');
 }
 
 window.addEventListener('resize', () => aplicar(false));

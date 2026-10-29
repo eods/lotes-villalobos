@@ -1,6 +1,6 @@
 // Cache para funcionar sin conexión. Subir la versión al cambiar archivos.
-const CACHE = 'lotes-villalobos-v1';
-const ARCHIVOS = ['./', 'index.html', 'lotes.js', 'mapa.jpg', 'manifest.webmanifest',
+const CACHE = 'lotes-villalobos-v2';
+const ARCHIVOS = ['./', 'index.html', 'config.js', 'lotes.js', 'mapa.jpg', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -13,7 +13,8 @@ self.addEventListener('activate', e => {
 });
 // Red primero (para recibir actualizaciones), cache si no hay conexión
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  // Los propietarios (Apps Script) los maneja la app; acá solo archivos propios
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     fetch(e.request)
       .then(r => { const copia = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copia)); return r; })
