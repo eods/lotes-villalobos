@@ -1,7 +1,7 @@
 {
-  "name": "Lotes Villalobos",
-  "short_name": "Lotes",
-  "description": "Buscador de lotes en el plano de Villalobos",
+  "name": "Pueblos del Plata · Lotes",
+  "short_name": "Pueblos del Plata",
+  "description": "Buscador de lotes de Villalobos, Magallanes y Sebastián Gaboto",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

@@ -1,7 +1,12 @@
-// API de propietarios para Lotes Villalobos / Magallanes (Google Apps Script, vinculado a la planilla).
+// API de propietarios para Lotes Pueblos del Plata (Google Apps Script, vinculado a la planilla).
 // La contraseña NO va acá: se carga en Configuración del proyecto > Propiedades del script > CLAVE.
 const HOJA = 'Lotes';
-const BARRIOS = { V: { nombre: 'Villalobos', max: 454 }, M: { nombre: 'Magallanes', max: 406 } };
+const VERSION = 3; // 2: guarda el barrio; 3: agrega Sebastián Gaboto
+const BARRIOS = {
+  V: { nombre: 'Villalobos', max: 454 },
+  M: { nombre: 'Magallanes', max: 406 },
+  G: { nombre: 'Sebastián Gaboto', max: 284 },
+};
 const MAX_TEXTO = 30, MAX_FALLOS = 10;
 
 // Columnas: A Lote | B Propietario | C Actualizado | D Barrio (vacío = Villalobos, filas anteriores)
@@ -19,12 +24,15 @@ function hoja_() {
 }
 
 function codigoBarrio_(texto) {
-  return String(texto || '').trim().toLowerCase().startsWith('m') ? 'M' : 'V';
+  const t = String(texto || '').trim().toLowerCase();
+  if (t.startsWith('m')) return 'M';
+  if (t.includes('gaboto') || t.startsWith('s') || t.startsWith('g')) return 'G';
+  return 'V';
 }
 
 function leer_() {
   const datos = hoja_().getDataRange().getValues();
-  const r = { V: {}, M: {} };
+  const r = { V: {}, M: {}, G: {} };
   for (let i = 1; i < datos.length; i++) {
     const n = parseInt(datos[i][0], 10), p = String(datos[i][1] || '').trim();
     if (n && p) r[codigoBarrio_(datos[i][3])][n] = p;
@@ -32,12 +40,12 @@ function leer_() {
   return r;
 }
 
-// Lectura pública: { ok, v: 2, lotes: { V: { "12": "Pérez" }, M: { ... } } }
+// Lectura pública: { ok, v, lotes: { V: { "12": "Pérez" }, M: { ... }, G: { ... } } }
 function doGet() {
-  return json_({ ok: true, v: 2, lotes: leer_() });
+  return json_({ ok: true, v: VERSION, lotes: leer_() });
 }
 
-// Escritura con contraseña: { accion: "verificar" | "guardar", clave, barrio: "V" | "M", lote, propietario }
+// Escritura con contraseña: { accion: "verificar" | "guardar", clave, barrio: "V" | "M" | "G", lote, propietario }
 function doPost(e) {
   let req;
   try { req = JSON.parse(e.postData.contents); } catch (x) { return json_({ ok: false, error: 'Pedido inválido' }); }
@@ -52,10 +60,10 @@ function doPost(e) {
     return json_({ ok: false, error: 'Contraseña incorrecta' });
   }
 
-  if (req.accion === 'verificar') return json_({ ok: true, v: 2 });
+  if (req.accion === 'verificar') return json_({ ok: true, v: VERSION });
 
   if (req.accion === 'guardar') {
-    const b = req.barrio === 'M' ? 'M' : 'V';
+    const b = Object.prototype.hasOwnProperty.call(BARRIOS, req.barrio) ? req.barrio : 'V';
     const n = parseInt(req.lote, 10);
     if (!(n >= 1 && n <= BARRIOS[b].max)) return json_({ ok: false, error: 'Lote inválido' });
     let p = String(req.propietario || '').replace(/\s+/g, ' ').trim().slice(0, MAX_TEXTO);
@@ -76,7 +84,7 @@ function doPost(e) {
     } finally {
       lock.releaseLock();
     }
-    return json_({ ok: true, v: 2, lotes: leer_() });
+    return json_({ ok: true, v: VERSION, lotes: leer_() });
   }
 
   return json_({ ok: false, error: 'Acción desconocida' });

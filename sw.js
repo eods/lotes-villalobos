@@ -1,6 +1,6 @@
 // Cache para funcionar sin conexión. Subir la versión al cambiar archivos.
-const CACHE = 'lotes-villalobos-v6';
-const ARCHIVOS = ['./', 'index.html', 'config.js', 'lotes.js', 'lotes-magallanes.js', 'mapa.jpg', 'mapa-magallanes.jpg', 'manifest.webmanifest',
+const CACHE = 'lotes-villalobos-v7';
+const ARCHIVOS = ['./', 'index.html', 'config.js', 'lotes.js', 'lotes-magallanes.js', 'lotes-gaboto.js', 'mapa.jpg', 'mapa-magallanes.jpg', 'mapa-gaboto.jpg', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Lotes Villalobos</title>
+<title>Pueblos del Plata · Lotes</title>
 <meta name="theme-color" content="#0b5f8a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lotes">
+<meta name="apple-mobile-web-app-title" content="Pueblos del Plata">
 <style>
   :root {
     --azul: #0b5f8a;
@@ -36,7 +36,7 @@
   header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: .3px; }
   #candado { background: transparent; color: #fff; font-size: 18px; padding: 2px 6px; display: none; }
   #filtro { display: flex; gap: 4px; margin: 0 0 8px; padding: 3px; background: rgba(255,255,255,.15); border-radius: 10px; }
-  #filtro button { flex: 1; font-size: 14px; padding: 7px 4px; border-radius: 8px; background: transparent; color: #fff; }
+  #filtro button { flex: 1; min-width: 0; font-size: 13px; padding: 7px 2px; border-radius: 8px; background: transparent; color: #fff; }
   #filtro button.on { background: #fff; color: var(--azul); }
   #buscar { display: flex; gap: 8px; }
   input { flex: 1; min-width: 0; font-size: 18px; padding: 10px 14px; border: 0; border-radius: 10px;
@@ -129,13 +129,14 @@
 <body>
 <header>
   <div class="titulo">
-    <h1>Buscador de lotes</h1>
+    <h1>Pueblos del Plata · Lotes</h1>
     <button id="candado" type="button" aria-label="Habilitar edición" title="Habilitar edición">🔒</button>
   </div>
   <div id="filtro" role="group" aria-label="Barrio">
     <button type="button" data-b="T">Todos</button>
     <button type="button" data-b="V">Villalobos</button>
     <button type="button" data-b="M">Magallanes</button>
+    <button type="button" data-b="G">Gaboto</button>
   </div>
   <form id="buscar" autocomplete="off">
     <input id="lote" type="search" enterkeyhint="search" placeholder="N° de lote" aria-label="Lote o propietario">
@@ -192,20 +193,35 @@
 <script src="config.js"></script>
 <script src="lotes.js"></script>
 <script src="lotes-magallanes.js"></script>
+<script src="lotes-gaboto.js"></script>
 <script>
 const DY = 7; // DY: del número de lote al centro del recuadro
-// Barrios en un mismo lienzo: Villalobos arriba, Magallanes debajo (ox, oy: posición del plano en el lienzo)
+// Barrios apilados en un mismo lienzo (ox, oy: posición del plano; esc: ampliación del plano en el lienzo)
 const BARRIOS = {
-  V: { nombre: 'Villalobos', img: 'mapa.jpg', w: 2000, h: 998, ox: 0, oy: 0, lotes: LOTES, geo: GEO, ceros: 0 },
-  M: { nombre: 'Magallanes', img: 'mapa-magallanes.jpg', w: 1000, h: 1441, ox: 500, oy: 1068, lotes: LOTES_MAG, geo: GEO_MAG, ceros: 3 },
+  V: { nombre: 'Villalobos', img: 'mapa.jpg', w: 2000, h: 998, esc: 1, ox: 0, oy: 0, lotes: LOTES, geo: GEO, ceros: 0, api: 1 },
+  M: { nombre: 'Magallanes', img: 'mapa-magallanes.jpg', w: 1000, h: 1441, esc: 1, ox: 500, oy: 1068, lotes: LOTES_MAG, geo: GEO_MAG, ceros: 3, api: 2 },
+  G: { nombre: 'Sebastián Gaboto', img: 'mapa-gaboto.jpg', w: 1200, h: 717, esc: 1.5, ox: 100, oy: 2589, lotes: LOTES_GAB, geo: GEO_GAB, ceros: 3, api: 3 },
 };
-const W = 2000, H = BARRIOS.M.oy + BARRIOS.M.h;
+// api: versión mínima del script de la planilla que guarda ese barrio sin confundirlo con otro
+const W = 2000, H = BARRIOS.G.oy + BARRIOS.G.h * BARRIOS.G.esc;
 const params = new URLSearchParams(location.search);
 const EDITAR = params.has('editar');
 const $ = id => document.getElementById(id);
 const clave_ = (b, n) => b + '-' + n;
 const numero = (b, n) => String(n).padStart(BARRIOS[b].ceros, '0'); // como figura en el plano
-const posicion = (b, n) => { const B = BARRIOS[b], d = B.lotes[n]; return [B.ox + d[0], B.oy + d[1] + DY]; };
+const posicion = (b, n) => { const B = BARRIOS[b], d = B.lotes[n]; return [B.ox + d[0] * B.esc, B.oy + (d[1] + DY) * B.esc]; };
+function coordenadasLote(b, n) {
+  // Ajuste afín del plano; si el barrio tiene correcciones locales, se reparten por distancia inversa
+  const G = BARRIOS[b].geo, d = BARRIOS[b].lotes[n], x = d[0], y = d[1] + DY;
+  let lat = G.lat[0] + G.lat[1] * x + G.lat[2] * y, lng = G.lng[0] + G.lng[1] * x + G.lng[2] * y;
+  if (G.ajustes) {
+    let sw = 0, sa = 0, sn = 0;
+    for (const [cx, cy] of G.esquinas) sw += 1 / Math.max((x - cx) ** 2 + (y - cy) ** 2, 1);
+    for (const [cx, cy, da, dn] of G.ajustes) { const w = 1 / Math.max((x - cx) ** 2 + (y - cy) ** 2, 1); sw += w; sa += w * da; sn += w * dn; }
+    lat += sa / sw; lng += sn / sw;
+  }
+  return [lat, lng];
+}
 
 // Correcciones de posición hechas en modo edición (solo en este dispositivo)
 let ajustes = {};
@@ -222,14 +238,15 @@ lienzo.style.height = H + 'px';
 for (const b in BARRIOS) {
   const B = BARRIOS[b], im = document.createElement('img');
   im.src = B.img; im.alt = 'Plano de ' + B.nombre;
-  Object.assign(im.style, { left: B.ox + 'px', top: B.oy + 'px', width: B.w + 'px', height: B.h + 'px' });
+  Object.assign(im.style, { left: B.ox + 'px', top: B.oy + 'px', width: B.w * B.esc + 'px', height: B.h * B.esc + 'px' });
   lienzo.prepend(im);
+  if (b === 'V') continue; // el plano de Villalobos ya trae su nombre
+  const titulo = document.createElement('div');
+  titulo.className = 'nombreBarrio';
+  titulo.textContent = B.nombre.toUpperCase();
+  Object.assign(titulo.style, { left: B.ox + 'px', width: B.w * B.esc + 'px', top: (B.oy - 60) + 'px' });
+  lienzo.appendChild(titulo);
 }
-const titulo = document.createElement('div');
-titulo.className = 'nombreBarrio';
-titulo.textContent = 'MAGALLANES';
-Object.assign(titulo.style, { left: BARRIOS.M.ox + 'px', width: BARRIOS.M.w + 'px', top: (BARRIOS.V.h + 8) + 'px' });
-lienzo.appendChild(titulo);
 
 let s = 1, tx = 0, ty = 0, actual = null; // actual = { b, n }
 let filtro = 'T';
@@ -237,19 +254,19 @@ try { filtro = localStorage.getItem('filtroBarrio') || 'T'; } catch (e) {}
 const barriosFiltro = () => filtro === 'T' ? Object.keys(BARRIOS) : [filtro];
 
 // ---------- Propietarios (Google Sheets vía Apps Script) ----------
-let PROP = { V: {}, M: {} };
-let clave = null, apiV2 = false; // apiV2: el script ya guarda el barrio de cada lote
+let PROP = { V: {}, M: {}, G: {} };
+let clave = null, apiVersion = 1; // versión del script de la planilla (2: guarda barrio; 3: también Gaboto)
 function normalizarProp(l) {
-  if (!l) return { V: {}, M: {} };
-  if (l.V || l.M) return { V: l.V || {}, M: l.M || {} };
-  return { V: l, M: {} }; // formato anterior: solo Villalobos
+  if (!l) return { V: {}, M: {}, G: {} };
+  if (l.V || l.M || l.G) return { V: l.V || {}, M: l.M || {}, G: l.G || {} };
+  return { V: l, M: {}, G: {} }; // formato anterior: solo Villalobos
 }
 try { PROP = normalizarProp(JSON.parse(localStorage.getItem('propietarios') || 'null')); } catch (e) {}
 try { clave = sessionStorage.getItem('clave'); } catch (e) {}
 
 function guardarPropLocal() { try { localStorage.setItem('propietarios', JSON.stringify(PROP)); } catch (e) {} }
 function recibirProp(j) {
-  apiV2 = j.v >= 2;
+  apiVersion = j.v || 1;
   PROP = normalizarProp(j.lotes);
   guardarPropLocal();
   dibujarEtiquetas();
@@ -300,10 +317,10 @@ function verTodo(anim) { s = escalaMin(); aplicar(anim); }
 function verBarrio(b, anim) {
   // Encuadra un barrio (o todo el lienzo con 'T')
   if (b === 'T') return verTodo(anim);
-  const B = BARRIOS[b], vw = visor.clientWidth, vh = visor.clientHeight;
-  s = Math.min(vw / B.w, vh / B.h) * 0.97;
-  tx = vw / 2 - (B.ox + B.w / 2) * s;
-  ty = vh / 2 - (B.oy + B.h / 2) * s;
+  const B = BARRIOS[b], vw = visor.clientWidth, vh = visor.clientHeight, w = B.w * B.esc, h = B.h * B.esc;
+  s = Math.min(vw / w, vh / h) * 0.97;
+  tx = vw / 2 - (B.ox + w / 2) * s;
+  ty = vh / 2 - (B.oy + h / 2) * s;
   aplicar(anim);
 }
 function zoomEn(px, py, nuevo, anim) {
@@ -354,8 +371,7 @@ function mostrar(b, n, centrar) {
     det.insertAdjacentHTML('beforeend', '<div>Sin propietario cargado</div>');
   }
   $('btnEditar').style.display = clave ? 'block' : 'none';
-  const G = B.geo;
-  const lat = G.lat[0] + G.lat[1] * d[0] + G.lat[2] * (d[1] + DY), lng = G.lng[0] + G.lng[1] * d[0] + G.lng[2] * (d[1] + DY);
+  const [lat, lng] = coordenadasLote(b, n);
   $('btnLlegar').href = `https://www.google.com/maps/dir/?api=1&destination=${lat.toFixed(6)},${lng.toFixed(6)}`;
   $('btnLlegar').classList.add('on');
   if (centrar) centrarEn(x, y, Math.max(escalaMin() * 3, 1.3));
@@ -409,7 +425,8 @@ $('buscar').addEventListener('submit', e => {
   const q = normalizar(texto);
   lista = [];
   for (const b of barriosFiltro()) for (const n in PROP[b]) if (normalizar(PROP[b][n]).includes(q)) lista.push({ b, n: +n });
-  lista.sort((p, q2) => p.b.localeCompare(q2.b) * -1 || p.n - q2.n); // Villalobos primero
+  const orden = Object.keys(BARRIOS);
+  lista.sort((p, q2) => orden.indexOf(p.b) - orden.indexOf(q2.b) || p.n - q2.n);
   if (lista.length === 1) return irALote(lista[0].b, lista[0].n);
   if (lista.length > 1) return mostrarOpciones(lista, `${lista.length} lotes coinciden con “${texto}”`);
   fichaError('Sin resultados', `Ningún propietario coincide con "${texto}"${filtro === 'T' ? '' : ' en ' + BARRIOS[filtro].nombre}.`);
@@ -474,8 +491,8 @@ $('eCancelar').onclick = () => { $('edicion').classList.remove('on'); mensajeFic
 $('edicion').addEventListener('submit', async e => {
   e.preventDefault();
   const { b, n } = actual, nombre = $('eProp').value.trim().slice(0, 30);
-  // Con el script anterior (sin barrio) solo se puede guardar Villalobos, para no pisar lotes con el mismo número
-  if (b !== 'V' && !apiV2) return mensajeFicha('Hay que actualizar el script de la planilla para guardar lotes de ' + BARRIOS[b].nombre + '.');
+  // Con un script anterior se guardaría en otro barrio y pisaría el lote del mismo número
+  if (apiVersion < BARRIOS[b].api) return mensajeFicha('Hay que actualizar el script de la planilla para guardar lotes de ' + BARRIOS[b].nombre + '.');
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true;
   mensajeFicha('Guardando…');
@@ -557,7 +574,7 @@ function toque(cx, cy) {
   const x = (cx - r.left - tx) / s, y = (cy - r.top - ty) / s;
   if (EDITAR && actual) {
     const B = BARRIOS[actual.b], d = B.lotes[actual.n];
-    d[0] = Math.round(x - B.ox); d[1] = Math.round(y - B.oy - DY);
+    d[0] = Math.round((x - B.ox) / B.esc); d[1] = Math.round((y - B.oy) / B.esc - DY);
     ajustes[clave_(actual.b, actual.n)] = [d[0], d[1]];
     try { localStorage.setItem('ajustesLotes', JSON.stringify(ajustes)); } catch (e) {}
     mostrar(actual.b, actual.n, false);
@@ -614,8 +631,8 @@ window.addEventListener('resize', () => aplicar(false));
 const img = lienzo.querySelector('img');
 function arrancar() {
   verBarrio(filtro, false);
-  // #V345, #M12 o #345 (formato anterior = Villalobos)
-  const m = location.hash.match(/^#([VM]?)(\d+)$/);
+  // #V345, #M12, #G7 o #345 (formato anterior = Villalobos)
+  const m = location.hash.match(/^#([VMG]?)(\d+)$/);
   if (m) {
     const b = m[1] || 'V', n = parseInt(m[2], 10);
     if (BARRIOS[b].lotes[n]) { input.value = numero(b, n); mostrar(b, n, true); }
